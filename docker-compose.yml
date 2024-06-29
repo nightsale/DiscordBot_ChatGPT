@@ -1,0 +1,9 @@
+version: "1"  # Indiquez la version de votre fichier docker-compose
+
+services:
+  mon_bot_discord:
+    build: .  # Builds the image from the current directory (.)
+    working_dir: /volume1/docker/ChatGPT  # Définit le répertoire de travail dans le conteneur
+    volumes:
+      - ./app:/volume1/docker/ChatGPT  # Monte le répertoire local dans le conteneur
+    command: ["python", "main.py"]  # Exécute le script principal de votre bot (main.py)

@@ -8,14 +8,16 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 CHANNEL_ID = int(os.getenv('DISCORD_CHANNELID'))  # Ensure CHANNEL_ID is an integer
 OPEN_AI_TOKEN = os.getenv('OPENAI_API_KEY')
-image_word="/image"
+image_word = "/image"  # add /image in a variable to search after in a discord message
 intents = discord.Intents.default()
 intents.messages = True  # Enable intents to receive message content
 
 client = discord.Client(intents=intents)
 
+
 @client.event
 async def on_ready():
+    global guild
     for guild in client.guilds:
         if guild.name == GUILD:
             break
@@ -25,6 +27,7 @@ async def on_ready():
         f'{guild.name} (id: {guild.id})\n'
         f'{client.user.id}'  # Confirmation of connection to Discord
     )
+
 
 @client.event
 async def on_message(message):
@@ -38,21 +41,22 @@ async def on_message(message):
     message_content = message.content.replace(mention_to_remove, "").strip()
     print("Message received:", message_content)
 
-    if image_word in message_content:
-        prompt = message_content[len("/image"):].strip()
+    if image_word in message_content:  # Verify if /image in message
+        prompt = message_content[len("/image"):].strip()  # Remove /image to the prompt
         if prompt:
             print("Generating image for prompt:", prompt)
             image_url = await generate_image(prompt)
-            response = image_url if image_url else "Failed to generate image."
+            response = image_url if image_url else "Failed to generate image."  # Error message if problem with OpenAI
         else:
-            response = "Please provide a prompt after /image."
+            response = "Please provide a prompt after /image."  # Error if no prompt
     else:
-        response = await get_chatgpt_response(message_content)
+        response = await get_chatgpt_response(message_content)  # If no /image answer with OpenAI chat
 
     await message.channel.send(response)
     print("Message sent:", response)
 
-async def get_chatgpt_response(prompt):  # Send a request to OpenAI
+
+async def get_chatgpt_response(prompt):  # Send a request to OpenAI for text generation
     openai.api_key = OPEN_AI_TOKEN
     response = openai.chat.completions.create(
         model="gpt-3.5-turbo",
@@ -67,7 +71,8 @@ async def get_chatgpt_response(prompt):  # Send a request to OpenAI
     response_message = response.choices[0].message.content
     return response_message
 
-async def generate_image(prompt):  # Generate an image from a prompt
+
+async def generate_image(prompt):  # Generate an image from a prompt with openAI
     openai.api_key = OPEN_AI_TOKEN
     try:
         response = openai.images.generate(
@@ -75,7 +80,7 @@ async def generate_image(prompt):  # Generate an image from a prompt
             prompt=prompt,
             n=1,
             size="1024x1024",  # Adjust the size as needed
-            quality = "standard"
+            quality="standard"
         )
         image_url = response.data[0].url
         print("Image URL generated:", image_url)
@@ -83,5 +88,6 @@ async def generate_image(prompt):  # Generate an image from a prompt
     except Exception as e:
         print("Error generating image:", e)
         return None
+
 
 client.run(TOKEN)

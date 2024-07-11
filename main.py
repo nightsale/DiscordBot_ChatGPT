@@ -31,9 +31,9 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == client.user:  #Try to not reply at this answer himself
         return
-    if client.user not in message.mentions:
+    if client.user not in message.mentions: #Answer only if chatGPT has been mentioned
         print(client.user)
         return
 

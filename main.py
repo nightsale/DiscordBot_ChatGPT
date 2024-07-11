@@ -1,6 +1,7 @@
 import discord
 import openai
 import os
+import google.generativeai as google
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from the .env file
@@ -8,7 +9,9 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 CHANNEL_ID = int(os.getenv('DISCORD_CHANNELID'))  # Ensure CHANNEL_ID is an integer
 OPEN_AI_TOKEN = os.getenv('OPENAI_API_KEY')
+GEMINI_AI_TOKEN = os.getenv('GEMINI_API_KEY')
 image_word = "/image"  # add /image in a variable to search after in a discord message
+gemini_word = "/gemini"
 intents = discord.Intents.default()
 intents.messages = True  # Enable intents to receive message content
 
@@ -42,13 +45,18 @@ async def on_message(message):
     print("Message received:", message_content)
 
     if image_word in message_content:  # Verify if /image in message
-        prompt = message_content[len("/image"):].strip()  # Remove /image to the prompt
+        prompt = message_content[len(image_word):].strip()  # Remove /image to the prompt
         if prompt:
             print("Generating image for prompt:", prompt)
             image_url = await generate_image(prompt)
             response = image_url if image_url else "Failed to generate image."  # Error message if problem with OpenAI
         else:
             response = "Please provide a prompt after /image."  # Error if no prompt
+    elif gemini_word in message_content:
+        prompt = message_content[len(gemini_word):].strip() # Remove /gemini to the prompt
+        if prompt:
+            print("Generating with Gemini :",prompt)
+            response = await get_gemini_response(prompt)
     else:
         response = await get_chatgpt_response(message_content)  # If no /image answer with OpenAI chat
 
@@ -88,6 +96,14 @@ async def generate_image(prompt):  # Generate an image from a prompt with openAI
     except Exception as e:
         print("Error generating image:", e)
         return None
+
+async  def get_gemini_response(prompt):
+    google.configure(api_key=GEMINI_AI_TOKEN)
+    model = google.GenerativeModel('gemini-1.5-flash')
+    response = model.generate_content(prompt)
+    response_message = response.text
+    return response_message
+
 
 
 client.run(TOKEN)

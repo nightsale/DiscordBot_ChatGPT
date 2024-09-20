@@ -5,13 +5,7 @@ import google.generativeai as google
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from the .env file
-TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
-CHANNEL_ID = int(os.getenv('DISCORD_CHANNELID'))  # Ensure CHANNEL_ID is an integer
-OPEN_AI_TOKEN = os.getenv('OPENAI_API_KEY')
-GEMINI_AI_TOKEN = os.getenv('GEMINI_API_KEY')
-image_word = "/image"  # add /image in a variable to search after in a discord message
-gemini_word = "/gemini"
+TOKEN, GUILD, CHANNEL_ID, OPEN_AI_TOKEN, GEMINI_AI_TOKEN = os.getenv('DISCORD_TOKEN'), os.getenv('DISCORD_GUILD'), int(os.getenv('DISCORD_CHANNELID')), os.getenv('OPENAI_API_KEY'), os.getenv('GEMINI_API_KEY')
 intents = discord.Intents.default()
 intents.messages = True  # Enable intents to receive message content
 
@@ -36,7 +30,7 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:  #Try to not reply at this answer himself
         return
-    if client.user not in message.mentions: #Answer only if chatGPT has been mentioned
+    if client.user not in message.mentions:  #Answer only if chatGPT has been mentioned
         print(client.user)
         return
 
@@ -44,22 +38,30 @@ async def on_message(message):
     message_content = message.content.replace(mention_to_remove, "").strip()
     print("Message received:", message_content)
 
-    if image_word in message_content:  # Verify if /image in message
-        prompt = message_content[len(image_word):].strip()  # Remove /image to the prompt
-        if prompt:
-            print("Generating image for prompt:", prompt)
-            image_url = await generate_image(prompt)
-            response = image_url if image_url else "Failed to generate image."  # Error message if problem with OpenAI
+    if "/text" in message_content:  # Verify if /text in message
+        prompt = message_content[len("/text"):].strip()  # Remove /text to the prompt\
+        assert prompt != 0
+        if "-gemini" in prompt:
+            prompt = message_content[len("-gemini"):].strip()  # Remove /gemini to the prompt
+            if prompt:
+                print("Generating with Gemini :", prompt)
+                response = await get_gemini_text_response(prompt)
+        elif "-chatgpt" in prompt:
+            prompt = message_content[len("-chatgpt"):].strip()
+            print("Generating with chatgpt :", prompt)
+            response = await get_chatgpt_response(prompt)
         else:
-            response = "Please provide a prompt after /image."  # Error if no prompt
-    elif gemini_word in message_content:
-        prompt = message_content[len(gemini_word):].strip() # Remove /gemini to the prompt
+            return "Enter the desired model"
+    elif "/image" in message_content:
+        prompt = message_content[len("/image"):].strip()
         if prompt:
-            print("Generating with Gemini :",prompt)
-            response = await get_gemini_response(prompt)
+            print("Generating image fo_ir prompt:", prompt)
+            image_url = await openai_generate_image(prompt)
+            response = image_url if image_url else "Failed to generate image."  # Error message if problem with OpenAI
+    elif "/help" in message_content:
+        return "For generate text use /text following with you model (-gemini or -chatgpt"
     else:
-        response = await get_chatgpt_response(message_content)  # If no /image answer with OpenAI chat
-
+        response = "Please provide a prompt or use /help"  # Error if no prompt
     await message.channel.send(response)
     print("Message sent:", response)
 
@@ -80,7 +82,7 @@ async def get_chatgpt_response(prompt):  # Send a request to OpenAI for text gen
     return response_message
 
 
-async def generate_image(prompt):  # Generate an image from a prompt with openAI
+async def openai_generate_image(prompt):  # Generate an image from a prompt with openAI
     openai.api_key = OPEN_AI_TOKEN
     try:
         response = openai.images.generate(
@@ -97,13 +99,13 @@ async def generate_image(prompt):  # Generate an image from a prompt with openAI
         print("Error generating image:", e)
         return None
 
-async  def get_gemini_response(prompt):
+
+async def get_gemini_text_response(prompt):
     google.configure(api_key=GEMINI_AI_TOKEN)
     model = google.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content(prompt)
     response_message = response.text
     return response_message
-
 
 
 client.run(TOKEN)
